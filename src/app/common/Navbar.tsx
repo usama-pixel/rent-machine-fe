@@ -3,11 +3,14 @@ import React, { useState } from 'react'
 import logo from 'logo'
 import { useRouter } from 'next/navigation';
 import Button3 from './Button3';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/store';
 type Props = {}
 
 function Navbar({}: Props) {
   const router = useRouter();
   const [showOpts, setShowOpts] = useState(false);
+  const user = useSelector((state: RootState) => state.user)
   const logout = () => {
     localStorage.clear();
     router.replace('/login');
@@ -28,6 +31,7 @@ function Navbar({}: Props) {
             />
           </div>
           <div className={`absolute top-12 right-3 bg-slate-50 py-2 px-3 rounded-lg ${!showOpts && 'invisible'}`}>
+            <span>{user.id || 'id'} - {user.name || 'name'}</span>
             <Button3 onClick={logout} text='logout' />
           </div>
         </div>

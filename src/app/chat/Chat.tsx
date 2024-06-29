@@ -10,6 +10,7 @@ import { selectUser, setUser } from '@/store/features/auth/userSlice';
 import { apiGet } from '@/utils/api';
 import axios from 'axios';
 import { useSearchParams } from 'next/navigation';
+import { getUser } from '@/utils/getUser';
 
 
 type Props = {}
@@ -18,6 +19,7 @@ function Chat({}: Props) {
   const [msgs, setMsgs] = useState<any[]>([]);
   const [msg, setMsg] = useState('')
   let socket = useSelector((state: RootState) => state.socket.value)
+  console.log({socketId: socket?.id})
   const user = useSelector((state: RootState) => state.user)
   const dispatch = useDispatch()
   const searchParams = useSearchParams();
@@ -25,10 +27,17 @@ function Chat({}: Props) {
   console.log({contactId})
   useEffect(() => {
     getData();
+    socket?.on('onMessage', (data) => {
+      console.log({data})
+      setMsgs((prev) => [...prev, {...data,}]);
+    });
+    return () => {
+      socket?.off('onMessage'); // Cleanup the event listener on component unmount
+    };
   }, [])
   const getData = async () => {
-    let userId = null;
-    if(!user.id) {
+    let userId = user.id;
+    if(!userId) {
       try {
         const res = await apiGet('auth/me')
         dispatch(setUser(res.data))
@@ -39,6 +48,8 @@ function Chat({}: Props) {
     }
     if(!userId) return;
     try {
+      console.log('broo')
+      console.log({contactId, userId})
       const r = await apiGet(`/message?userId=${userId}&contactId=${contactId}`)
       setMsgs(r.data)
       console.log({r})
@@ -48,10 +59,13 @@ function Chat({}: Props) {
     }
   }
   const handleSend = () => {
+    console.log({msgs})
     if (!socket) {
       return;
     }
     socket.emit('newMessage', {msg, from: user.id, to: contactId});
+    console.log({msg, from: user.id, to: contactId})
+    setMsgs((prev) => [...prev, {content: {text: msg, from: {id: user.id}, to: {id: contactId}}}]);
     setMsg(''); // Clear the input field after sending the message
   };
   const handleKeyPress = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -59,9 +73,21 @@ function Chat({}: Props) {
       handleSend();
     }
   };
-  useEffect(() => {
+  // let user = useSelector(selectUser);
+  // useEffect(() => {
+  //   getData2();
+  //   return () => {
+  //     socket?.off('onMessage'); // Cleanup the event listener on component unmount
+  //   };
+  // }, [socket]);
+  const getData2 = async () => {
+    let tempUser = user;
+    if(!user.id) {
+      tempUser = await getUser(dispatch, setUser);
+    }
+    
     if (!socket) {
-      const s = initializeSocket();
+      const s = initializeSocket(tempUser.id);
       dispatch(setSocket(s));
       socket = s;
     }
@@ -69,11 +95,7 @@ function Chat({}: Props) {
       console.log({data})
       setMsgs((prev) => [...prev, {...data,}]);
     });
-
-    return () => {
-      socket?.off('onMessage'); // Cleanup the event listener on component unmount
-    };
-  }, [socket, dispatch]);
+  }
   return (
     // <!-- component -->
     <div className="flex h-screen overflow-hidden">
@@ -217,9 +239,9 @@ function Chat({}: Props) {
             <div className="h-screen overflow-y-auto p-4 pb-96">
               {msgs.map((msg: any) => {
                 // console.log({toID: msg?.content?.to.id, userId: user?.id})
-                console.log({'msg?.content?.from?.id': msg?.content?.from?.id, 'user?.id': user?.id})
+                // console.log({'msg?.content?.from?.id': msg?.content?.from?.id, 'user?.id': user?.id})
                 return (
-                  msg?.content?.from?.id !== user?.id ?
+                  msg?.content?.from?.id+'' !== user?.id+'' ?
                   <IncommingMsg text={msg?.content?.text} />:
                   <OutgoingMsg text={msg?.content?.text} />
                 )
