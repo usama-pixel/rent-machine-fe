@@ -53,9 +53,10 @@ function Card({
         </div>
         <div className='flex justify-between'>
             <Heart />
-            <Button text="Contact" onClick={() => {
+            <Button text="View" onClick={() => {
                 console.log('id', user.id)
-                router.push(`/chat?userId=${user.id}`);
+                router.push('/property')
+                // router.push(`/chat?userId=${user.id}`);
             }} />
         </div>
         <div
